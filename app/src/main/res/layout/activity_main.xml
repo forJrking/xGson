@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorPrimaryDark"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/tv_tojson"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="#555555"
+        android:gravity="center_vertical"
+        android:padding="5dp"
+        android:text="toJson"
+        android:textColor="#fff"
+        android:textSize="13sp"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tv_fromjson"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="#555555"
+        android:gravity="center_vertical"
+        android:padding="5dp"
+        android:text="FromJson"
+        android:textColor="#fff"
+        android:textSize="13sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/tv_tojson" />
+
+    <Button
+        android:id="@+id/bt_json_1"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:padding="10dp"
+        android:text="Gson.toJson"
+        android:textAllCaps="false"
+        android:textSize="14dp"
+        app:layout_constraintEnd_toStartOf="@id/bt_json_2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_fromjson" />
+
+    <Button
+        android:id="@+id/bt_json_2"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:text="Gson.formJson"
+        android:textAllCaps="false"
+        android:textSize="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/bt_json_1"
+        app:layout_constraintTop_toTopOf="@id/bt_json_1" />
+
+    <Button
+        android:id="@+id/bt_json_3"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:padding="10dp"
+        android:text="MGson.toJson"
+        android:textAllCaps="false"
+        android:textSize="14dp"
+        app:layout_constraintEnd_toStartOf="@id/bt_json_2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/bt_json_1" />
+
+    <Button
+        android:id="@+id/bt_json_4"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:text="MGson.formJson"
+        android:textAllCaps="false"
+        android:textSize="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/bt_json_1"
+        app:layout_constraintTop_toTopOf="@id/bt_json_3" />
+
+    <Button
+        android:id="@+id/bt_json_5"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="30dp"
+        android:padding="10dp"
+        android:text="Gson性能"
+        android:textAllCaps="false"
+        android:textSize="14dp"
+        app:layout_constraintEnd_toStartOf="@id/bt_json_2"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/bt_json_3" />
+
+    <Button
+        android:id="@+id/bt_json_6"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:text="MGson性能"
+        android:textAllCaps="false"
+        android:textSize="14dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/bt_json_1"
+        app:layout_constraintTop_toTopOf="@id/bt_json_5" />
+
+</android.support.constraint.ConstraintLayout>
