@@ -311,7 +311,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
             this.constructor = constructor;
             this.boundFields = boundFields;
             // DES: 这里复制了原来的Map集合 清理后不能序列化对象了 WTF?? 所以只取名字集合了
-            this.boundFieldNames = new HashSet<>(boundFields.keySet());
+            this.boundFieldNames = new HashSet<>();
         }
 
         @Override
@@ -351,6 +351,8 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
 
             T instance = constructor.construct();
             try {
+                // DES: 如果同一个类之前缺失，后面又给回来这里就出问题了坑爹
+                boundFieldNames.addAll(boundFields.keySet());
                 in.beginObject();
                 while (in.hasNext()) {
                     String name = in.nextName();
@@ -360,14 +362,15 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                     } else {
                         field.read(in, instance);
                     }
-                    // DES: 从全部字段中去掉json中指明的
                     boundFieldNames.remove(name);
                 }
+
+                // DES: 剩余的 boundFieldNames 就是json没有对应字段
                 if (!boundFieldNames.isEmpty()) {
                     JsonErrorHandler.onJsonTokenParseException(in,
                             new Exception("class: " + instance.getClass().getName() +
                                     " lose field: " + boundFieldNames.toString()));
-                    // DES: 剩余的 boundFields 就是接口没有给的字段 由于json没有对应字段
+
                     for (String otherKey : boundFieldNames) {
 
                         BoundField otherField = boundFields.get(otherKey);
@@ -395,8 +398,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
 //                        }
                         }
                     }
-//                    DES: 这个集合清理干净 有问题
-//                    boundFieldNames.clear();
+                    boundFieldNames.clear();
                 }
             } catch (IllegalStateException e) {
                 JsonErrorHandler.onJsonTokenParseException(in, e);
