@@ -11,6 +11,9 @@ import java.io.IOException;
 
 /**
  * 字符串转换，使用包装类
+ * 原理：消费调用无法解析的类型对用的json，即可跳过这个字段
+ * {@link JsonReader}提供了方法  {@link JsonReader#skipValue()}
+ * 读取跳过没有进行解析性能好于其他 {@link JsonReader#nextDouble()} 、{@link JsonReader#nextString()}  、{@link JsonReader#nextName()}
  */
 class Utils {
 
@@ -81,57 +84,6 @@ class Utils {
     }
 
     /**
-     * 解析jsonArray
-     *
-     * @param in json数据
-     * @throws IOException
-     */
-    static void readArray(JsonReader in) throws IOException {
-        in.beginArray();
-        readJson(in);
-        in.endArray();
-    }
-
-    /**
-     * 解析jsonObject
-     *
-     * @param in json数据
-     * @throws IOException
-     */
-    static void readObject(JsonReader in) throws IOException {
-        in.beginObject();
-        readJson(in);
-        in.endObject();
-    }
-
-    /**
-     * 解析整个json数据
-     *
-     * @param in json数据
-     * @throws IOException
-     */
-    private static void readJson(JsonReader in) throws IOException {
-        while (in.hasNext()) {
-            JsonToken peek = in.peek();
-            if (peek == JsonToken.BEGIN_ARRAY) {
-                readArray(in);
-            } else if (peek == JsonToken.NUMBER) {
-                in.nextDouble();
-            } else if (peek == JsonToken.STRING) {
-                in.nextString();
-            } else if (peek == JsonToken.NULL) {
-                in.nextNull();
-            } else if (peek == JsonToken.NAME) {
-                in.nextName();
-            } else if (peek == JsonToken.BOOLEAN) {
-                in.nextBoolean();
-            } else if (peek == JsonToken.BEGIN_OBJECT) {
-                readObject(in);
-            }
-        }
-    }
-
-    /**
      * 数字处理适配器
      *
      * @param type 0(int.class, Integer.class ) 1(short.class, Short.class) 2(long.class,
@@ -150,11 +102,13 @@ class Utils {
                     isNot = true;
                 } else if (peek == JsonToken.BEGIN_OBJECT) {
                     //增加判断是错误OBJECT的类型（应该是Number）,移动in的下标到结束，移动下标的代码在下方
-                    Utils.readObject(in);
+//                    Utils.readObject(in);
+                    in.skipValue();
                     isNot = true;
                 } else if (peek == JsonToken.NAME) {
                     //增加判断是错误的name的类型（应该是Number）,移动in的下标到结束，移动下标的代码在下方
-                    in.nextName();
+//                    in.nextName();
+                    in.skipValue();
                     isNot = true;
                 } else if (peek == JsonToken.BOOLEAN) {
                     //增加判断是错误的boolean的类型（应该是Number）,移动in的下标到结束，移动下标的代码在下方
@@ -162,7 +116,8 @@ class Utils {
                     isNot = true;
                 } else if (peek == JsonToken.BEGIN_ARRAY) {
                     //增加判断是错误的array的类型（应该是Number）,移动in的下标到结束，移动下标的代码在下方
-                    readArray(in);
+//                    readArray(in);
+                    in.skipValue();
                     isNot = true;
                 }
                 // DES: 不是以上类型  则有 STRING NUMBER
@@ -247,15 +202,17 @@ class Utils {
                 } else if (peek == JsonToken.BOOLEAN) {
                     return Boolean.toString(in.nextBoolean());
                 } else if (peek == JsonToken.BEGIN_OBJECT) {
-                    Utils.readObject(in);
+//                    Utils.readObject(in);
+                    in.skipValue();
                     return "";
                 } else if (peek == JsonToken.NAME) {
                     //增加判断是错误的name的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
-                    in.nextName();
+                    in.skipValue();
                     return "";
                 } else if (peek == JsonToken.BEGIN_ARRAY) {
                     //增加判断是错误的ARRAY的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
-                    Utils.readArray(in);
+//                    Utils.readArray(in);
+                    in.skipValue();
                     return "";
                 }
 
@@ -314,5 +271,50 @@ class Utils {
                 out.value(value);
             }
         };
+    }
+
+    /**
+     * 消费掉 jsonArray
+     */
+    static void readArray(JsonReader in) throws IOException {
+        in.beginArray();
+        readJson(in);
+        in.endArray();
+    }
+
+    /**
+     * 消费掉 jsonObject
+     */
+    static void readObject(JsonReader in) throws IOException {
+        in.beginObject();
+        readJson(in);
+        in.endObject();
+    }
+
+    /**
+     * 消费整个json数据
+     *
+     * @param in json数据
+     * @throws IOException
+     */
+    private static void readJson(JsonReader in) throws IOException {
+        while (in.hasNext()) {
+            JsonToken peek = in.peek();
+            if (peek == JsonToken.BEGIN_ARRAY) {
+                readArray(in);
+            } else if (peek == JsonToken.NUMBER) {
+                in.nextDouble();
+            } else if (peek == JsonToken.STRING) {
+                in.nextString();
+            } else if (peek == JsonToken.NULL) {
+                in.nextNull();
+            } else if (peek == JsonToken.NAME) {
+                in.nextName();
+            } else if (peek == JsonToken.BOOLEAN) {
+                in.nextBoolean();
+            } else if (peek == JsonToken.BEGIN_OBJECT) {
+                readObject(in);
+            }
+        }
     }
 }

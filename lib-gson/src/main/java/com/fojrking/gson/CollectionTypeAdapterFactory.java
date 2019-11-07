@@ -129,27 +129,32 @@ class CollectionTypeAdapterFactory implements TypeAdapterFactory {
             }
             //增加判断是错误OBJECT的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
             if (peek == JsonToken.BEGIN_OBJECT) {
-                Utils.readObject(in);
+//                Utils.readObject(in);
+                in.skipValue();
                 return constructor.construct();
             }
             //增加判断是错误的NUMBER的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
             if (peek == JsonToken.NUMBER) {
-                in.nextDouble();
+//                in.nextDouble();
+                in.skipValue();
                 return constructor.construct();
             }
             //增加判断是错误的String的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
             if (peek == JsonToken.STRING) {
-                in.nextString();
+//                in.nextString();
+                in.skipValue();
                 return constructor.construct();
             }
             //增加判断是错误的name的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
             if (peek == JsonToken.NAME) {
-                in.nextName();
+//                in.nextName();
+                in.skipValue();
                 return constructor.construct();
             }
             //增加判断是错误的boolean的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
             if (peek == JsonToken.BOOLEAN) {
-                in.nextBoolean();
+//                in.nextBoolean();
+                in.skipValue();
                 return constructor.construct();
             }
 

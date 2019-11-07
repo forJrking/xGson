@@ -1,5 +1,6 @@
 package com.fojrking.gson;
 
+import android.os.Build;
 import android.util.Log;
 
 import com.google.gson.stream.JsonReader;
@@ -20,9 +21,7 @@ public class JsonErrorHandler {
     static JsonSyntaxErrorListener mListener = JsonSyntaxErrorListener.DEFAULT;
 
     public static void setListener(JsonSyntaxErrorListener listener) {
-        if (listener != null) {
-            mListener = listener;
-        }
+        mListener = listener;
     }
 
     /**
@@ -33,7 +32,7 @@ public class JsonErrorHandler {
      * @param expectedToken expected token
      */
     public static void checkJsonToken(JsonReader in, JsonToken expectedToken) {
-        if (in == null || expectedToken == null) {
+        if (in == null || expectedToken == null || mListener == null) {
             return;
         }
         JsonToken inToken = null;
@@ -43,6 +42,9 @@ public class JsonErrorHandler {
             e.printStackTrace();
         }
         if (inToken == expectedToken) {
+            return;
+        }
+        if ((expectedToken == JsonToken.NUMBER) && inToken == JsonToken.STRING) {
             return;
         }
         if (inToken != JsonToken.NULL) {
@@ -60,7 +62,7 @@ public class JsonErrorHandler {
      * @param exception json parse exception
      */
     public static void onJsonTokenParseException(JsonReader in, Exception exception) {
-        if (in == null || exception == null) {
+        if (in == null || exception == null || mListener == null) {
             return;
         }
         String json = getJson(in);
@@ -69,24 +71,25 @@ public class JsonErrorHandler {
     }
 
     private static String getJson(JsonReader in) {
-        StringBuilder json = new StringBuilder();
-        try {
-            Class<? extends JsonReader> c = in.getClass();
-            Field field = c.getDeclaredField("in");
-            field.setAccessible(true);
-            Object o = field.get(in);
-            if (o instanceof StringReader) {
-                StringReader reader = (StringReader) o;
-                reader.reset();
-                int i;
-                while ((i = reader.read()) != -1) {
-                    json.append((char) i);
+        String json = "restore json is not supported";
+        // DES: 9.0获取不到不用进入了
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            try {
+                Class<? extends JsonReader> c = in.getClass();
+                Field field = c.getDeclaredField("in");
+                field.setAccessible(true);
+                Object o = field.get(in);
+                if (o instanceof StringReader) {
+                    StringReader reader = (StringReader) o;
+                    Field str = reader.getClass().getDeclaredField("str");
+                    str.setAccessible(true);
+                    json = (String) str.get(reader);
                 }
+            } catch (Exception e) {
+//            e.printStackTrace();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
-        return json.toString();
+        return json;
     }
 
     private static void notifyJsonSyntaxError(String exception) {
