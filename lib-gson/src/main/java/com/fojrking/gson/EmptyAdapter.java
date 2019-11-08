@@ -14,6 +14,7 @@ final class EmptyAdapter {
     public static final String EMPTY_NUM = "0";
     public static final String EMPTY_ARRAY = "[]";
     public static final String EMPTY_OBJ = "{}";
+    public static final String EMPTY_STRING = "\"\"";
 
 
     public static JsonReader getJsonReader(String json) {

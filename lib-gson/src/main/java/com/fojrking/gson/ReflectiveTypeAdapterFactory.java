@@ -368,7 +368,22 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                     }
                     boundFieldNames.remove(name);
                 }
-
+                // DES: 来一波注解处理
+                if (!boundFieldNames.isEmpty()) {
+                    NonNullField annotation = instance.getClass().getAnnotation(NonNullField.class);
+                    //注解为空全部都解析
+                    if (annotation != null) {
+                        //这些包含字段忽略赋值
+                        String[] ignoreAll = annotation.value();
+                        if (ignoreAll.length == 0) {
+                            boundFieldNames.clear();
+                        } else {
+                            for (String ignore : ignoreAll) {
+                                boundFieldNames.remove(ignore);
+                            }
+                        }
+                    }
+                }
                 // DES: 剩余的 boundFieldNames 就是json没有对应字段
                 if (!boundFieldNames.isEmpty()) {
                     JsonErrorHandler.onJsonTokenParseException(in,
@@ -386,6 +401,9 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                             Class<?> type = otherField.field.getType();
                             if (Number.class.isAssignableFrom(type)) {
                                 JsonReader jsonReader = EmptyAdapter.getJsonReader(EmptyAdapter.EMPTY_NUM);
+                                otherField.read(jsonReader, instance);
+                            } else if (CharSequence.class.isAssignableFrom(type)) {
+                                JsonReader jsonReader = EmptyAdapter.getJsonReader(EmptyAdapter.EMPTY_STRING);
                                 otherField.read(jsonReader, instance);
                             } else if (Collection.class.isAssignableFrom(type)) {
                                 JsonReader jsonReader = EmptyAdapter.getJsonReader(EmptyAdapter.EMPTY_ARRAY);
