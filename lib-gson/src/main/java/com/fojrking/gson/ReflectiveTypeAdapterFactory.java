@@ -37,13 +37,13 @@ import java.util.Collection;
 import java.util.Currency;
 import java.util.Date;
 import java.util.GregorianCalendar;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Vector;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -305,13 +305,13 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         private final ObjectConstructor<T> constructor;
         private final Map<String, BoundField> boundFields;
         //用于检测json没有给出应用类型字段
-        private final HashSet<String> boundFieldNames;
+        private final Vector<String> boundFieldNames;
 
         Adapter(ObjectConstructor<T> constructor, Map<String, BoundField> boundFields) {
             this.constructor = constructor;
             this.boundFields = boundFields;
             // DES: 这里复制了原来的Map集合 清理后不能序列化对象了 WTF?? 所以只取名字集合了
-            this.boundFieldNames = new HashSet<>();
+            this.boundFieldNames = new Vector<>();
         }
 
         @Override
@@ -321,7 +321,9 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
             JsonToken peek = in.peek();
             if (peek == JsonToken.NULL) {
                 in.nextNull();
-                return constructor.construct();
+                //成员变量给null时候这个地方帮助生成了变量
+//                return constructor.construct();
+                return null;
             }
             //增加判断是错误的ARRAY的类型（应该是object）,移动in的下标到结束，移动下标的代码在下方
             if (peek == JsonToken.BEGIN_ARRAY) {

@@ -13,8 +13,8 @@ public interface JsonSyntaxErrorListener {
     JsonSyntaxErrorListener DEFAULT = new JsonSyntaxErrorListener() {
         @Override
         public void onJsonSyntaxError(String exception, String invokeStack) {
-            Log.e("json", "syntax exception: " + exception);
-            Log.e("json", "stack exception: " + invokeStack);
+            Log.w("json", "syntax exception: " + exception);
+            Log.w("json", "stack exception: " + invokeStack);
         }
     };
 

@@ -149,7 +149,7 @@ public class MainActivity extends AppCompatActivity {
 //    return "{\"array\":[\"a1\",\"a2\"],\"bean\":{\"int2\":\"-2\",\"list2\":[\"l2-2\",\"l2-1\"]},\"doubleB\":12.0008f,\"floatF\":\"12\",\"intA\":\"\",\"isOk\":false,\"list\":[\"list1\",\"list2\"],\"longL\":-100L,\"map\":{\"map2\":\"map2\",\"map1\":\"map1\"},\"str\":\"str\"}";
         // DES: 字符串异常
 //        return "{\"int2\":\"2L\",\"list2\":[],\"mLong\":\"测试文字WEBssldndjj难度饕餮\"}";
-        return "{\"array\":[],\"doubleB\":11.0d,\"floatF\":null,\"intA\":10,\"isOk\":1,\"list\":true,\"longL\":100000,\"map\":{\"map2\":\"map2\",\"map1\":\"map1\"},\"str\":\"str\"}";
+        return "{\"array\":[],\"doubleB\":11.0d,\"floatF\":null,\"intA\":10,\"isOk\":1,\"bean\":null,\"list\":true,\"longL\":100000,\"map\":{\"map2\":\"map2\",\"map1\":\"map1\"},\"str\":\"str\"}";
     }
 
     private TestBean getBo() {
