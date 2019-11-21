@@ -14,7 +14,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
-public @interface NonNullField {
+public @interface NonField {
 
     /*** @return 不需要兜底的字段名称数组*/
     String[] value() default {};

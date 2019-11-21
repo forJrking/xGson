@@ -4,6 +4,8 @@ import android.util.Log;
 
 import com.google.gson.FieldNamingStrategy;
 import com.google.gson.Gson;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonSerializer;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.TypeAdapter;
 import com.google.gson.TypeAdapterFactory;
@@ -14,6 +16,8 @@ import com.google.gson.internal.ConstructorConstructor;
 import com.google.gson.internal.Excluder;
 import com.google.gson.internal.ObjectConstructor;
 import com.google.gson.internal.Primitives;
+import com.google.gson.internal.bind.TreeTypeAdapter;
+import com.google.gson.internal.reflect.ReflectionAccessor;
 import com.google.gson.reflect.TypeToken;
 import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
@@ -34,11 +38,11 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Currency;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -58,6 +62,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
     private final ConstructorConstructor constructorConstructor;
     private final FieldNamingStrategy fieldNamingPolicy;
     private final Excluder excluder;
+    private final ReflectionAccessor accessor = ReflectionAccessor.getInstance();
     private final ArrayList<Class> typeTokens;
 
     public ReflectiveTypeAdapterFactory(ConstructorConstructor constructorConstructor,
@@ -109,20 +114,22 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         return !excluder.excludeClass(f.getType(), serialize) && !excluder.excludeField(f, serialize);
     }
 
+    /** first element holds the default name */
     private List<String> getFieldNames(Field f) {
-        return getFieldName(fieldNamingPolicy, f);
-    }
-
-    static List<String> getFieldName(FieldNamingStrategy fieldNamingPolicy, Field f) {
-        SerializedName serializedName = f.getAnnotation(SerializedName.class);
-        List<String> fieldNames = new LinkedList<String>();
-        if (serializedName == null) {
-            fieldNames.add(fieldNamingPolicy.translateName(f));
-        } else {
-            fieldNames.add(serializedName.value());
-            for (String alternate : serializedName.alternate()) {
-                fieldNames.add(alternate);
-            }
+        SerializedName annotation = f.getAnnotation(SerializedName.class);
+        if (annotation == null) {
+            String name = fieldNamingPolicy.translateName(f);
+            return Collections.singletonList(name);
+        }
+        String serializedName = annotation.value();
+        String[] alternates = annotation.alternate();
+        if (alternates.length == 0) {
+            return Collections.singletonList(serializedName);
+        }
+        List<String> fieldNames = new ArrayList<String>(alternates.length + 1);
+        fieldNames.add(serializedName);
+        for (String alternate : alternates) {
+            fieldNames.add(alternate);
         }
         return fieldNames;
     }
@@ -161,24 +168,29 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         return new Adapter<T>(constructor, getBoundFields(gson, type, raw));
     }
 
-    private ReflectiveTypeAdapterFactory.BoundField createBoundField(final Gson context,
-                                                                     final Field field,
-                                                                     final String name,
-                                                                     final TypeToken<?> fieldType,
-                                                                     boolean serialize,
-                                                                     boolean deserialize) {
+    private ReflectiveTypeAdapterFactory.BoundField createBoundField(final Gson context, final Field field,
+                                                                     final String name, final TypeToken<?> fieldType,
+                                                                     boolean serialize, boolean deserialize) {
 
         final boolean isPrimitive = Primitives.isPrimitive(fieldType.getRawType());
+        // special casing primitives here saves ~5% on Android...
+        JsonAdapter annotation = field.getAnnotation(JsonAdapter.class);
+        TypeAdapter<?> mapped = null;
+        if (annotation != null) {
+            mapped = getTypeAdapter(constructorConstructor, context, fieldType, annotation);
+        }
+        final boolean jsonAdapterPresent = mapped != null;
+        if (mapped == null) mapped = context.getAdapter(fieldType);
 
+        final TypeAdapter<?> typeAdapter = mapped;
         return new ReflectiveTypeAdapterFactory.BoundField(name, field, serialize, deserialize) {
-
-            final TypeAdapter<?> typeAdapter = getFieldAdapter(context, field, fieldType);
 
             @SuppressWarnings({"unchecked", "rawtypes"})
             @Override
             void write(JsonWriter writer, Object value) throws IOException, IllegalAccessException {
                 Object fieldValue = field.get(value);
-                TypeAdapter t = new TypeAdapterRuntimeTypeWrapper(context, this.typeAdapter, fieldType.getType());
+                TypeAdapter t = jsonAdapterPresent ? typeAdapter
+                        : new TypeAdapterRuntimeTypeWrapper(context, typeAdapter, fieldType.getType());
                 t.write(writer, fieldValue);
             }
 
@@ -201,43 +213,6 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         };
     }
 
-    TypeAdapter<?> getFieldAdapter(Gson gson, Field field, TypeToken<?> fieldType) {
-        JsonAdapter annotation = field.getAnnotation(JsonAdapter.class);
-        if (annotation != null) {
-            TypeAdapter<?> adapter = getTypeAdapter(constructorConstructor, gson, fieldType, annotation);
-            if (adapter != null) {
-                return adapter;
-            }
-        }
-        return gson.getAdapter(fieldType);
-    }
-
-    static TypeAdapter<?> getTypeAdapter(ConstructorConstructor constructorConstructor,
-                                         Gson gson,
-                                         TypeToken<?> fieldType,
-                                         JsonAdapter annotation) {
-        Class<?> value = annotation.value();
-        TypeAdapter<?> typeAdapter;
-
-        if (TypeAdapter.class.isAssignableFrom(value)) {
-            Class<TypeAdapter<?>> typeAdapterClass = (Class<TypeAdapter<?>>) value;
-            typeAdapter = constructorConstructor.get(TypeToken.get(typeAdapterClass)).construct();
-        } else if (TypeAdapterFactory.class.isAssignableFrom(value)) {
-            Class<TypeAdapterFactory> typeAdapterFactory = (Class<TypeAdapterFactory>) value;
-            typeAdapter = constructorConstructor.get(TypeToken.get(typeAdapterFactory))
-                    .construct()
-                    .create(gson, fieldType);
-        } else {
-            throw new IllegalArgumentException(
-                    "@JsonAdapter value must be TypeAdapter or TypeAdapterFactory reference.");
-        }
-
-        if (typeAdapter != null) {
-            typeAdapter = typeAdapter.nullSafe();
-        }
-
-        return typeAdapter;
-    }
 
     private Map<String, BoundField> getBoundFields(Gson context, TypeToken<?> type, Class<?> raw) {
         Map<String, BoundField> result = new LinkedHashMap<>();
@@ -254,7 +229,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                 if (!serialize && !deserialize) {
                     continue;
                 }
-                field.setAccessible(true);
+                accessor.makeAccessible(field);
                 Type fieldType = $Gson$Types.resolve(type.getType(), raw, field.getGenericType());
                 List<String> fieldNames = getFieldNames(field);
                 BoundField previous = null;
@@ -372,7 +347,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                 }
                 // DES: 来一波注解处理
                 if (!boundFieldNames.isEmpty()) {
-                    NonNullField annotation = instance.getClass().getAnnotation(NonNullField.class);
+                    NonField annotation = instance.getClass().getAnnotation(NonField.class);
                     //注解为空全部都解析
                     if (annotation != null) {
                         //这些包含字段忽略赋值
@@ -395,7 +370,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                     for (String otherKey : boundFieldNames) {
 
                         BoundField otherField = boundFields.get(otherKey);
-                        if (otherField == null || !otherField.deserialized) {
+                        if (otherField == null || !otherField.serialized || !otherField.deserialized) {
 //                        不序列话跳过这个字段;
                             Log.w("json", "json exception no field:" + otherKey);
                         } else {
@@ -454,5 +429,35 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
             }
             out.endObject();
         }
+    }
+
+    //com.google.gson.internal.bind.JsonAdapterAnnotationTypeAdapterFactory
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private TypeAdapter<?> getTypeAdapter(ConstructorConstructor constructorConstructor, Gson gson,
+                                          TypeToken<?> type, JsonAdapter annotation) {
+        Object instance = constructorConstructor.get(TypeToken.get(annotation.value())).construct();
+
+        TypeAdapter<?> typeAdapter;
+        if (instance instanceof TypeAdapter) {
+            typeAdapter = (TypeAdapter<?>) instance;
+        } else if (instance instanceof TypeAdapterFactory) {
+            typeAdapter = ((TypeAdapterFactory) instance).create(gson, type);
+        } else if (instance instanceof JsonSerializer || instance instanceof JsonDeserializer) {
+            JsonSerializer<?> serializer = instance instanceof JsonSerializer
+                    ? (JsonSerializer) instance : null;
+            JsonDeserializer<?> deserializer = instance instanceof JsonDeserializer
+                    ? (JsonDeserializer) instance : null;
+            typeAdapter = new TreeTypeAdapter(serializer, deserializer, gson, type, null);
+        } else {
+            throw new IllegalArgumentException("Invalid attempt to bind an instance of "
+                    + instance.getClass().getName() + " as a @JsonAdapter for " + type.toString()
+                    + ". @JsonAdapter value must be a TypeAdapter, TypeAdapterFactory,"
+                    + " JsonSerializer or JsonDeserializer.");
+        }
+
+        if (typeAdapter != null && annotation.nullSafe()) {
+            typeAdapter = typeAdapter.nullSafe();
+        }
+        return typeAdapter;
     }
 }

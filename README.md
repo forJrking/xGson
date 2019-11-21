@@ -96,8 +96,8 @@ GsonUtils.fromJson(str,T.class)
 GsonUtils.setGson(new Gson())
     
 //注解用法   默认使用会对所有支持字段兜底
-@NonNullField	//所有字段均不兜底，gson默认行为
-@NonNullField(value = {"str","list"}) //指定这些字段不兜底 其他兜底
+@NonField	//所有字段均不兜底，gson默认行为
+@NonField(value = {"str","list"}) //指定这些字段不兜底 其他兜底
 public class TestBean {
   int i;
   String str;
