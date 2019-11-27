@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Vector;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -170,7 +170,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
 
     private ReflectiveTypeAdapterFactory.BoundField createBoundField(final Gson context, final Field field,
                                                                      final String name, final TypeToken<?> fieldType,
-                                                                     boolean serialize, boolean deserialize) {
+                                                                     boolean serialize, boolean deserialize, boolean multiField) {
 
         final boolean isPrimitive = Primitives.isPrimitive(fieldType.getRawType());
         // special casing primitives here saves ~5% on Android...
@@ -183,7 +183,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         if (mapped == null) mapped = context.getAdapter(fieldType);
 
         final TypeAdapter<?> typeAdapter = mapped;
-        return new ReflectiveTypeAdapterFactory.BoundField(name, field, serialize, deserialize) {
+        return new ReflectiveTypeAdapterFactory.BoundField(name, field, serialize, deserialize, multiField) {
 
             @SuppressWarnings({"unchecked", "rawtypes"})
             @Override
@@ -232,6 +232,8 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                 accessor.makeAccessible(field);
                 Type fieldType = $Gson$Types.resolve(type.getType(), raw, field.getGenericType());
                 List<String> fieldNames = getFieldNames(field);
+                // 多字段不能识别原字段还是其他字段不进行兜底
+                boolean multiField = fieldNames.size() > 1;
                 BoundField previous = null;
                 for (int i = 0; i < fieldNames.size(); ++i) {
                     String name = fieldNames.get(i);
@@ -240,7 +242,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                         serialize = false;
                     }
                     BoundField boundField = createBoundField(context, field, name,
-                            TypeToken.get(fieldType), serialize, deserialize);
+                            TypeToken.get(fieldType), serialize, deserialize, multiField);
                     BoundField replaced = result.put(name, boundField);
                     if (previous == null) {
                         previous = replaced;
@@ -261,12 +263,14 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         final Field field;
         final boolean serialized;
         final boolean deserialized;
+        final boolean multiField;
 
-        protected BoundField(String name, Field field, boolean serialized, boolean deserialized) {
+        protected BoundField(String name, Field field, boolean serialized, boolean deserialized, boolean multiField) {
             this.name = name;
             this.field = field;
             this.serialized = serialized;
             this.deserialized = deserialized;
+            this.multiField = multiField;
         }
 
         abstract boolean writeField(Object value) throws IOException, IllegalAccessException;
@@ -280,13 +284,13 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         private final ObjectConstructor<T> constructor;
         private final Map<String, BoundField> boundFields;
         //用于检测json没有给出应用类型字段
-        private final Vector<String> boundFieldNames;
+        private final CopyOnWriteArrayList<String> boundFieldNames;
 
         Adapter(ObjectConstructor<T> constructor, Map<String, BoundField> boundFields) {
             this.constructor = constructor;
             this.boundFields = boundFields;
             // DES: 这里复制了原来的Map集合 清理后不能序列化对象了 WTF?? 所以只取名字集合了
-            this.boundFieldNames = new Vector<>();
+            this.boundFieldNames = new CopyOnWriteArrayList<>();
         }
 
         @Override
@@ -370,9 +374,9 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
                     for (String otherKey : boundFieldNames) {
 
                         BoundField otherField = boundFields.get(otherKey);
-                        if (otherField == null || !otherField.serialized || !otherField.deserialized) {
+                        if (otherField == null || otherField.multiField || !otherField.deserialized) {
 //                        不序列话跳过这个字段;
-                            Log.w("json", "json exception no field:" + otherKey);
+                            Log.w("json", "json exception field:" + otherKey);
                         } else {
                             // DES: 常见类型反射出空的值但不是null
                             Class<?> type = otherField.field.getType();
