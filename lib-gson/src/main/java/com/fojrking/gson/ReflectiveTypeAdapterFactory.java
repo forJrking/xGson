@@ -43,11 +43,11 @@ import java.util.Currency;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -114,7 +114,9 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
         return !excluder.excludeClass(f.getType(), serialize) && !excluder.excludeField(f, serialize);
     }
 
-    /** first element holds the default name */
+    /**
+     * first element holds the default name
+     */
     private List<String> getFieldNames(Field f) {
         SerializedName annotation = f.getAnnotation(SerializedName.class);
         if (annotation == null) {
@@ -283,14 +285,10 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
     public static final class Adapter<T> extends TypeAdapter<T> {
         private final ObjectConstructor<T> constructor;
         private final Map<String, BoundField> boundFields;
-        //用于检测json没有给出应用类型字段
-        private final CopyOnWriteArrayList<String> boundFieldNames;
 
         Adapter(ObjectConstructor<T> constructor, Map<String, BoundField> boundFields) {
             this.constructor = constructor;
             this.boundFields = boundFields;
-            // DES: 这里复制了原来的Map集合 清理后不能序列化对象了 WTF?? 所以只取名字集合了
-            this.boundFieldNames = new CopyOnWriteArrayList<>();
         }
 
         @Override
@@ -300,7 +298,6 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
             JsonToken peek = in.peek();
             if (peek == JsonToken.NULL) {
                 in.nextNull();
-                //成员变量给null时候这个地方帮助生成了变量
 //                return constructor.construct();
                 return null;
             }
@@ -337,7 +334,7 @@ class ReflectiveTypeAdapterFactory implements TypeAdapterFactory {
             T instance = constructor.construct();
             try {
                 // DES: 如果同一个类之前缺失，后面又给回来这里就出问题了坑爹
-                boundFieldNames.addAll(boundFields.keySet());
+                LinkedList<String> boundFieldNames = new LinkedList<>(boundFields.keySet());
                 in.beginObject();
                 while (in.hasNext()) {
                     String name = in.nextName();

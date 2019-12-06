@@ -32,7 +32,7 @@ public class JsonErrorHandler {
      * @param expectedToken expected token
      */
     public static void checkJsonToken(JsonReader in, JsonToken expectedToken) {
-        if (in == null || expectedToken == null || mListener == null) {
+        if (mListener == null || expectedToken == null || in == null) {
             return;
         }
         JsonToken inToken = null;
@@ -50,7 +50,8 @@ public class JsonErrorHandler {
         if (inToken != JsonToken.NULL) {
             String exception = "expected " + expectedToken + " but was " + inToken + " path " + in.getPath();
             exception = exception + "\nJson: " + getJson(in);
-            notifyJsonSyntaxError(exception);
+            String invokeStack = Log.getStackTraceString(new Exception("syntax exception"));
+            mListener.onJsonSyntaxError(exception, invokeStack);
         }
     }
 
@@ -62,12 +63,12 @@ public class JsonErrorHandler {
      * @param exception json parse exception
      */
     public static void onJsonTokenParseException(JsonReader in, Exception exception) {
-        if (in == null || exception == null || mListener == null) {
+        if (mListener == null || exception == null || in == null) {
             return;
         }
-        String json = getJson(in);
         // DES: 获取原来in内容
-        notifyJsonSyntaxError(exception.getMessage() + "\n" + json);
+        String invokeStack = Log.getStackTraceString(new Exception("syntax exception"));
+        mListener.onJsonSyntaxError(exception.getMessage(), invokeStack);
     }
 
     private static String getJson(JsonReader in) {
@@ -91,13 +92,4 @@ public class JsonErrorHandler {
         }
         return json;
     }
-
-    private static void notifyJsonSyntaxError(String exception) {
-        if (mListener == null) {
-            return;
-        }
-        String invokeStack = Log.getStackTraceString(new Exception("syntax exception"));
-        mListener.onJsonSyntaxError(exception, invokeStack);
-    }
-
 }
