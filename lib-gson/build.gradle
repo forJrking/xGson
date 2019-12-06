@@ -11,10 +11,9 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
-
+        consumerProguardFiles 'proguard-rules.pro'
     }
 
-    consumerProguardFiles 'proguard-rules.pro'
 
     buildTypes {
         release {
@@ -37,7 +36,7 @@ uploadArchives {
         def mavenLib = file(getProperty('mavenPath'))
         repository(url: "file://${mavenLib.absolutePath}")
         pom.project {
-            name   NAME
+            name NAME
             version VERSION
             groupId GROUDID
             artifactId ARTIFACTID
